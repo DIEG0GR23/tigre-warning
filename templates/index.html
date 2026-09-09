@@ -7,7 +7,7 @@
 
     <title>Tigre Warning</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=2">
 </head>
 
 <body>
@@ -36,6 +36,42 @@
             <a class="boton" href="/probar-alerta">
                 Probar alerta de Discord
             </a>
+        </section>
+        <section class="calendario">
+            <div class="encabezado-calendario">
+                <div>
+                    <p class="etiqueta">TEMPORADA 2026</p>
+                    <h2>Calendario de Tigres</h2>
+                </div>
+
+                <a class="enlace-oficial" href="https://www.tigres.com.mx/es/tigres/calendario/" target="_blank"
+                    rel="noopener noreferrer">
+                    Consultar sitio oficial ↗
+                </a>
+            </div>
+
+            {% if calendario %}
+            <div class="lista-partidos">
+                {% for juego in calendario %}
+                <article class="partido-calendario">
+                    <div class="fecha-partido">
+                        <strong>{{ juego.fecha }}</strong>
+                        <span>{{ juego.hora }}</span>
+                    </div>
+
+                    <div class="equipos-partido">
+                        <strong>
+                            {{ juego.local }} vs. {{ juego.visitante }}
+                        </strong>
+
+                        <span>🏟️ {{ juego.estadio }}</span>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No hay partidos disponibles actualmente.</p>
+            {% endif %}
         </section>
     </main>
 </body>

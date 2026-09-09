@@ -112,7 +112,82 @@ def obtener_proximo_partido():
             "hora": "No disponible",
             "estadio": "No disponible"
         }
+def obtener_calendario():
+    ahora = datetime.now(timezone.utc)
+    fecha_final = ahora + timedelta(days=180)
 
+    rango = (
+        ahora.strftime("%Y%m%d")
+        + "-"
+        + fecha_final.strftime("%Y%m%d")
+    )
+
+    url = (
+        "https://site.api.espn.com/apis/site/v2/"
+        f"sports/soccer/mex.1/scoreboard?dates={rango}&limit=1000"
+    )
+
+    try:
+        respuesta = requests.get(url, timeout=10)
+        respuesta.raise_for_status()
+        datos = respuesta.json()
+
+        calendario = []
+
+        for evento in datos.get("events", []):
+            competencia = evento["competitions"][0]
+            equipos = competencia["competitors"]
+
+            participa_tigres = any(
+                equipo["team"]["id"] == TIGRES_ID
+                for equipo in equipos
+            )
+
+            fecha_utc = datetime.fromisoformat(
+                evento["date"].replace("Z", "+00:00")
+            )
+
+            if not participa_tigres or fecha_utc <= ahora:
+                continue
+
+            local = next(
+                equipo["team"]["displayName"]
+                for equipo in equipos
+                if equipo["homeAway"] == "home"
+            )
+
+            visitante = next(
+                equipo["team"]["displayName"]
+                for equipo in equipos
+                if equipo["homeAway"] == "away"
+            )
+
+            fecha_local = fecha_utc.astimezone(
+                ZoneInfo("America/Monterrey")
+            )
+
+            estadio = competencia.get("venue", {}).get(
+                "fullName",
+                "Por confirmar"
+            )
+
+            calendario.append({
+                "local": local,
+                "visitante": visitante,
+                "fecha": fecha_local.strftime("%d/%m/%Y"),
+                "hora": fecha_local.strftime("%I:%M %p"),
+                "estadio": estadio,
+                "orden": fecha_utc.isoformat()
+            })
+
+        calendario.sort(
+            key=lambda partido: partido["orden"]
+        )
+
+        return calendario
+
+    except (requests.RequestException, KeyError, ValueError):
+        return []
 
 def enviar_alerta(mensaje):
     if not WEBHOOK_URL:
@@ -128,20 +203,30 @@ def enviar_alerta(mensaje):
     return respuesta.status_code == 204
 
 
+@app.get("/api/calendario")
+def api_calendario():
+    return obtener_calendario()
+
+
 @app.get("/")
 def inicio(request: Request):
     partido = obtener_proximo_partido()
+    calendario = obtener_calendario()
 
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"partido": partido}
+        context={
+            "partido": partido,
+            "calendario": calendario
+        }
     )
 
 
 @app.get("/probar-alerta")
 def probar_alerta():
     partido = obtener_proximo_partido()
+    
 
     mensaje = (
         "🐯 **Próximo partido de Tigres**\n"
@@ -150,7 +235,9 @@ def probar_alerta():
         f"⏰ {partido['hora']}\n"
         f"🏟️ {partido['estadio']}"
     )
+    
 
     enviar_alerta(mensaje)
+    
 
     return RedirectResponse(url="/")

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Tigre Warning</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+
+<body>
+    <main class="contenedor">
+        <h1>🐯 Tigre Warning</h1>
+
+        <p class="descripcion">
+            Nunca te pierdas un partido de Tigres.
+        </p>
+
+        <section class="tarjeta">
+            <p class="etiqueta">PRÓXIMO PARTIDO</p>
+
+            <h2>
+                {{ partido.local }}
+                <span>vs.</span>
+                {{ partido.visitante }}
+            </h2>
+
+            <div class="informacion">
+                <p>📅 {{ partido.fecha }}</p>
+                <p>⏰ {{ partido.hora }}</p>
+                <p>🏟️ {{ partido.estadio }}</p>
+            </div>
+
+            <a class="boton" href="/probar-alerta">
+                Probar alerta de Discord
+            </a>
+        </section>
+    </main>
+</body>
+
+</html>

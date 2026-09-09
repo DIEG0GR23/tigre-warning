@@ -156,3 +156,74 @@ h2 span {
         padding: 24px;
     }
 }
+
+.selector-equipo {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 25px 0;
+}
+
+.opcion-equipo {
+    min-width: 130px;
+    padding: 12px 20px;
+    border: 2px solid #f5c400;
+    border-radius: 10px;
+    color: white;
+    background: rgba(5, 29, 64, 0.9);
+    font: inherit;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.opcion-equipo:hover,
+.opcion-equipo.activa {
+    color: #071b3d;
+    background: #f5c400;
+}
+
+.aviso-oculto {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+
+.aviso-oculto.aviso-visible {
+    display: grid;
+}
+
+.ventana-aviso {
+    width: min(90%, 420px);
+    padding: 35px;
+    border: 2px solid #f5c400;
+    border-radius: 20px;
+    text-align: center;
+    background: #071b3d;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.icono-aviso {
+    font-size: 3rem;
+}
+
+.ventana-aviso h2 {
+    margin-bottom: 12px;
+    color: #f5c400;
+}
+
+.ventana-aviso button {
+    margin-top: 15px;
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 10px;
+    color: #071b3d;
+    background: #f5c400;
+    font-weight: bold;
+    cursor: pointer;
+}

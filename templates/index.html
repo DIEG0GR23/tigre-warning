@@ -34,11 +34,25 @@
         <section class="tarjeta">
             <p class="etiqueta">PRÓXIMO PARTIDO</p>
 
-            <h2>
-                {{ partido.local }}
-                <span>vs.</span>
-                {{ partido.visitante }}
-            </h2>
+            <div class="enfrentamiento">
+                <div class="equipo-principal">
+                    {% if partido.logo_local %}
+                    <img src="{{ partido.logo_local }}" alt="Escudo de {{ partido.local }}">
+                    {% endif %}
+
+                    <strong>{{ partido.local }}</strong>
+                </div>
+
+                <span class="versus">VS.</span>
+
+                <div class="equipo-principal">
+                    {% if partido.logo_visitante %}
+                    <img src="{{ partido.logo_visitante }}" alt="Escudo de {{ partido.visitante }}">
+                    {% endif %}
+
+                    <strong>{{ partido.visitante }}</strong>
+                </div>
+            </div>
 
             <div class="informacion">
                 <p>📅 {{ partido.fecha }}</p>
@@ -71,9 +85,23 @@
                     </div>
 
                     <div class="equipos-partido">
-                        <strong>
-                            {{ juego.local }} vs. {{ juego.visitante }}
-                        </strong>
+                        <div class="equipo-calendario">
+                            {% if juego.logo_local %}
+                            <img src="{{ juego.logo_local }}" alt="Escudo de {{ juego.local }}">
+                            {% endif %}
+
+                            <strong>{{ juego.local }}</strong>
+                        </div>
+
+                        <span class="vs-calendario">vs.</span>
+
+                        <div class="equipo-calendario">
+                            {% if juego.logo_visitante %}
+                            <img src="{{ juego.logo_visitante }}" alt="Escudo de {{ juego.visitante }}">
+                            {% endif %}
+
+                            <strong>{{ juego.visitante }}</strong>
+                        </div>
 
                         <span>🏟️ {{ juego.estadio }}</span>
                     </div>

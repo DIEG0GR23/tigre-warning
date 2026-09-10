@@ -93,17 +93,23 @@ def obtener_calendario():
             if not participa_tigres or fecha_utc <= ahora:
                 continue
 
-            local = next(
-                equipo["team"]["displayName"]
+            equipo_local = next(
+                equipo
                 for equipo in equipos
                 if equipo["homeAway"] == "home"
             )
 
-            visitante = next(
-                equipo["team"]["displayName"]
+            equipo_visitante = next(
+                equipo
                 for equipo in equipos
                 if equipo["homeAway"] == "away"
             )
+
+            local = equipo_local["team"]["displayName"]
+            visitante = equipo_visitante["team"]["displayName"]
+
+            logo_local = equipo_local["team"].get("logo")
+            logo_visitante = equipo_visitante["team"].get("logo")
 
             fecha_local = fecha_utc.astimezone(ZONA_MONTERREY)
 
@@ -127,7 +133,9 @@ def obtener_calendario():
                 "estadio": estadio,
                 "orden": fecha_utc.isoformat(),
                 "fecha_local_iso": fecha_local.isoformat(),
-                "google_calendar_url": enlace_calendar
+                "google_calendar_url": enlace_calendar,
+                "logo_local": logo_local,
+"logo_visitante": logo_visitante,
             })
 
         calendario.sort(

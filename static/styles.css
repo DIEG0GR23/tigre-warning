@@ -256,3 +256,67 @@ h2 span {
         margin-top: 8px;
     }
 }
+
+.enfrentamiento {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin: 28px 0;
+}
+
+.equipo-principal {
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3rem;
+}
+
+.equipo-principal img {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+}
+
+.versus {
+    color: #f5c400;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.equipo-calendario {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.equipo-calendario img {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+
+.vs-calendario {
+    margin-left: 45px;
+    color: #f5c400;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+@media (max-width: 600px) {
+    .enfrentamiento {
+        gap: 12px;
+    }
+
+    .equipo-principal {
+        width: 120px;
+        font-size: 1rem;
+    }
+
+    .equipo-principal img {
+        width: 65px;
+        height: 65px;
+    }
+}

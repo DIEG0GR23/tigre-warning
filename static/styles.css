@@ -227,3 +227,21 @@ h2 span {
     font-weight: bold;
     cursor: pointer;
 }
+
+.boton-calendar {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 9px 14px;
+    border: 1px solid #f5c400;
+    border-radius: 8px;
+    color: #f5c400;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.boton-calendar:hover {
+    color: #071b3d;
+    background-color: #f5c400;
+}

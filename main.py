@@ -266,3 +266,12 @@ def alerta_automatica(
         "ok": True,
         "mensaje": "Tigres no juega mañana."
     }
+    {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/alerta",
+      "schedule": "0 15 * * *"
+    }
+  ]
+}

@@ -206,18 +206,7 @@ def inicio(request: Request):
             "calendario": calendario
         }
     )
-
-
-@app.get("/probar-alerta")
-def probar_alerta():
-    partido = obtener_proximo_partido()
-    mensaje = crear_mensaje_discord(partido)
-
-    enviar_alerta(mensaje)
-
-    return RedirectResponse(url="/")
-
-
+    
 @app.get("/api/cron/alerta")
 def alerta_automatica(
     authorization: str | None = Header(default=None)

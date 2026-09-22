@@ -32,10 +32,10 @@ templates = Jinja2Templates(directory="templates")
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 CRON_SECRET = os.getenv("CRON_SECRET")
 
-TIGRES_ID = "232"
+TIGRES_SOFASCORE_ID = "1940"
 ZONA_MONTERREY = ZoneInfo("America/Monterrey")
 
-HEADERS_ESPN = {
+HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 Chrome/120 Safari/537.36"
@@ -78,204 +78,152 @@ def crear_enlace_google_calendar(
 
 
 # --------------------------------------------------
-# PROCESAR PARTIDOS DE ESPN
+# OBTENER ESTADIO
 # --------------------------------------------------
 
-def procesar_eventos(eventos, ahora):
-    calendario = []
+def obtener_nombre_estadio(evento):
+    venue = evento.get("venue") or {}
+    stadium = venue.get("stadium") or {}
 
-    for evento in eventos:
-        try:
-            competencias = evento.get("competitions", [])
-
-            if not competencias:
-                continue
-
-            competencia = competencias[0]
-            equipos = competencia.get("competitors", [])
-
-            participa_tigres = any(
-                str(equipo.get("team", {}).get("id")) == TIGRES_ID
-                for equipo in equipos
-            )
-
-            if not participa_tigres:
-                continue
-
-            fecha_evento = evento.get("date")
-
-            if not fecha_evento:
-                continue
-
-            fecha_utc = datetime.fromisoformat(
-                fecha_evento.replace("Z", "+00:00")
-            )
-
-            if fecha_utc <= ahora:
-                continue
-
-            equipo_local = next(
-                (
-                    equipo
-                    for equipo in equipos
-                    if equipo.get("homeAway") == "home"
-                ),
-                None
-            )
-
-            equipo_visitante = next(
-                (
-                    equipo
-                    for equipo in equipos
-                    if equipo.get("homeAway") == "away"
-                ),
-                None
-            )
-
-            if not equipo_local or not equipo_visitante:
-                continue
-
-            datos_local = equipo_local.get("team", {})
-            datos_visitante = equipo_visitante.get("team", {})
-
-            local = datos_local.get(
-                "displayName",
-                "Por confirmar"
-            )
-
-            visitante = datos_visitante.get(
-                "displayName",
-                "Por confirmar"
-            )
-
-            logo_local = datos_local.get("logo")
-            logo_visitante = datos_visitante.get("logo")
-
-            fecha_local = fecha_utc.astimezone(
-                ZONA_MONTERREY
-            )
-
-            venue = competencia.get("venue") or {}
-
-            estadio = venue.get(
-                "fullName",
-                "Por confirmar"
-            )
-
-            enlace_calendar = crear_enlace_google_calendar(
-                local,
-                visitante,
-                fecha_local,
-                estadio
-            )
-
-            calendario.append({
-                "local": local,
-                "visitante": visitante,
-                "fecha": fecha_local.strftime("%d/%m/%Y"),
-                "hora": fecha_local.strftime("%I:%M %p"),
-                "estadio": estadio,
-                "orden": fecha_utc.isoformat(),
-                "fecha_local_iso": fecha_local.isoformat(),
-                "google_calendar_url": enlace_calendar,
-                "logo_local": logo_local,
-                "logo_visitante": logo_visitante
-            })
-
-        except (
-            KeyError,
-            ValueError,
-            TypeError,
-            StopIteration
-        ) as error:
-            print(
-                "ERROR AL PROCESAR UN PARTIDO:",
-                repr(error)
-            )
-
-    calendario.sort(
-        key=lambda partido: partido["orden"]
+    return (
+        stadium.get("name")
+        or venue.get("name")
+        or "Por confirmar"
     )
 
-    return calendario
-
 
 # --------------------------------------------------
-# OBTENER CALENDARIO
+# OBTENER CALENDARIO DE SOFASCORE
 # --------------------------------------------------
 
 def obtener_calendario():
     ahora = datetime.now(timezone.utc)
     fecha_final = ahora + timedelta(days=180)
 
-    rango = (
-        ahora.strftime("%Y%m%d")
-        + "-"
-        + fecha_final.strftime("%Y%m%d")
+    url = (
+        "https://www.sofascore.com/api/v1/team/"
+        f"{TIGRES_SOFASCORE_ID}/events/next/0"
     )
 
-    # Primera opción: calendario general de Liga MX.
-    url_scoreboard = (
-        "https://site.api.espn.com/apis/site/v2/"
-        "sports/soccer/mex.1/scoreboard"
-        f"?dates={rango}&limit=1000"
-    )
+    try:
+        respuesta = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=15
+        )
 
-    # Segunda opción: calendario directo de Tigres.
-    url_equipo = (
-        "https://site.api.espn.com/apis/site/v2/"
-        "sports/soccer/mex.1/teams/"
-        f"{TIGRES_ID}/schedule?season={ahora.year}"
-    )
+        respuesta.raise_for_status()
+        datos = respuesta.json()
 
-    urls = [
-        url_scoreboard,
-        url_equipo
-    ]
+        calendario = []
 
-    for url in urls:
-        try:
-            respuesta = requests.get(
-                url,
-                headers=HEADERS_ESPN,
-                timeout=15
-            )
+        for evento in datos.get("events", []):
+            try:
+                timestamp = evento.get("startTimestamp")
 
-            respuesta.raise_for_status()
-            datos = respuesta.json()
+                if not timestamp:
+                    continue
 
-            eventos = datos.get("events", [])
-
-            calendario = procesar_eventos(
-                eventos,
-                ahora
-            )
-
-            if calendario:
-                print(
-                    f"PARTIDOS ENCONTRADOS: {len(calendario)}"
+                fecha_utc = datetime.fromtimestamp(
+                    timestamp,
+                    tz=timezone.utc
                 )
 
-                return calendario
+                if fecha_utc <= ahora:
+                    continue
 
-            print(
-                "ESPN RESPONDIÓ, PERO NO HUBO "
-                f"PARTIDOS EN: {url}"
-            )
+                if fecha_utc > fecha_final:
+                    continue
 
-        except requests.RequestException as error:
-            print(
-                "ERROR DE CONEXIÓN CON ESPN:",
-                repr(error)
-            )
+                equipo_local = evento.get("homeTeam") or {}
+                equipo_visitante = evento.get("awayTeam") or {}
 
-        except ValueError as error:
-            print(
-                "ERROR AL LEER JSON DE ESPN:",
-                repr(error)
-            )
+                local = equipo_local.get(
+                    "name",
+                    "Por confirmar"
+                )
 
-    return []
+                visitante = equipo_visitante.get(
+                    "name",
+                    "Por confirmar"
+                )
+
+                id_local = equipo_local.get("id")
+                id_visitante = equipo_visitante.get("id")
+
+                logo_local = (
+                    "https://img.sofascore.com/api/v1/"
+                    f"team/{id_local}/image"
+                    if id_local
+                    else None
+                )
+
+                logo_visitante = (
+                    "https://img.sofascore.com/api/v1/"
+                    f"team/{id_visitante}/image"
+                    if id_visitante
+                    else None
+                )
+
+                fecha_local = fecha_utc.astimezone(
+                    ZONA_MONTERREY
+                )
+
+                estadio = obtener_nombre_estadio(evento)
+
+                enlace_calendar = crear_enlace_google_calendar(
+                    local,
+                    visitante,
+                    fecha_local,
+                    estadio
+                )
+
+                calendario.append({
+                    "local": local,
+                    "visitante": visitante,
+                    "fecha": fecha_local.strftime("%d/%m/%Y"),
+                    "hora": fecha_local.strftime("%I:%M %p"),
+                    "estadio": estadio,
+                    "orden": fecha_utc.isoformat(),
+                    "fecha_local_iso": fecha_local.isoformat(),
+                    "google_calendar_url": enlace_calendar,
+                    "logo_local": logo_local,
+                    "logo_visitante": logo_visitante
+                })
+
+            except (
+                KeyError,
+                ValueError,
+                TypeError
+            ) as error:
+                print(
+                    "ERROR AL PROCESAR PARTIDO:",
+                    repr(error)
+                )
+
+        calendario.sort(
+            key=lambda partido: partido["orden"]
+        )
+
+        print(
+            f"PARTIDOS ENCONTRADOS: {len(calendario)}"
+        )
+
+        return calendario
+
+    except requests.RequestException as error:
+        print(
+            "ERROR DE CONEXIÓN CON SOFASCORE:",
+            repr(error)
+        )
+        return []
+
+    except ValueError as error:
+        print(
+            "ERROR AL LEER JSON DE SOFASCORE:",
+            repr(error)
+        )
+        return []
 
 
 # --------------------------------------------------
@@ -319,8 +267,7 @@ def crear_mensaje_discord(partido):
 def enviar_alerta(mensaje):
     if not WEBHOOK_URL:
         print(
-            "ERROR: No se encontró "
-            "DISCORD_WEBHOOK_URL."
+            "No se encontró DISCORD_WEBHOOK_URL."
         )
         return False
 
@@ -347,12 +294,11 @@ def enviar_alerta(mensaje):
             "ERROR AL CONECTAR CON DISCORD:",
             repr(error)
         )
-
         return False
 
 
 # --------------------------------------------------
-# RUTAS DE LA PÁGINA
+# PÁGINA PRINCIPAL
 # --------------------------------------------------
 
 @app.get("/")
@@ -384,10 +330,18 @@ def inicio(request: Request):
     )
 
 
+# --------------------------------------------------
+# API DEL CALENDARIO
+# --------------------------------------------------
+
 @app.get("/api/calendario")
 def api_calendario():
     return obtener_calendario()
 
+
+# --------------------------------------------------
+# PROBAR ALERTA MANUALMENTE
+# --------------------------------------------------
 
 @app.get("/probar-alerta")
 def probar_alerta():
@@ -408,7 +362,7 @@ def probar_alerta():
 
 
 # --------------------------------------------------
-# CRON AUTOMÁTICO DE VERCEL
+# ALERTA AUTOMÁTICA DE VERCEL
 # --------------------------------------------------
 
 @app.get("/api/cron/alerta")

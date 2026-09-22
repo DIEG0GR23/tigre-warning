@@ -101,9 +101,9 @@ def obtener_calendario():
     fecha_final = ahora + timedelta(days=180)
 
     url = (
-        "https://www.sofascore.com/api/v1/team/"
-        f"{TIGRES_SOFASCORE_ID}/events/next/0"
-    )
+    "https://www.sofascore.com/api/v1/team/"
+    f"{TIGRES_SOFASCORE_ID}/events/next/0"
+)   
 
     try:
         respuesta = requests.get(

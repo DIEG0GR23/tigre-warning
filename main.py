@@ -31,17 +31,20 @@ templates = Jinja2Templates(directory="templates")
 
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 CRON_SECRET = os.getenv("CRON_SECRET")
+API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
 
-TIGRES_SOFASCORE_ID = "1940"
 ZONA_MONTERREY = ZoneInfo("America/Monterrey")
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 Chrome/120 Safari/537.36"
-    ),
-    "Accept": "application/json"
+API_FOOTBALL_URL = (
+    "https://v3.football.api-sports.io"
+)
+
+HEADERS_API = {
+    "x-apisports-key": API_FOOTBALL_KEY or ""
 }
+
+# Guarda el ID mientras la aplicación esté activa.
+TIGRES_ID_CACHE = None
 
 
 # --------------------------------------------------
@@ -78,164 +81,224 @@ def crear_enlace_google_calendar(
 
 
 # --------------------------------------------------
-# OBTENER ESTADIO
+# PETICIONES A API-FOOTBALL
 # --------------------------------------------------
 
-def obtener_nombre_estadio(evento):
-    venue = evento.get("venue") or {}
-    stadium = venue.get("stadium") or {}
+def solicitar_api(ruta, parametros=None):
+    if not API_FOOTBALL_KEY:
+        print(
+            "ERROR: No se encontró API_FOOTBALL_KEY."
+        )
+        return None
 
-    return (
-        stadium.get("name")
-        or venue.get("name")
-        or "Por confirmar"
-    )
-
-
-# --------------------------------------------------
-# OBTENER CALENDARIO DE SOFASCORE
-# --------------------------------------------------
-
-def obtener_calendario():
-    ahora = datetime.now(timezone.utc)
-    fecha_final = ahora + timedelta(days=180)
-
-    url = (
-    "https://www.sofascore.com/api/v1/team/"
-    f"{TIGRES_SOFASCORE_ID}/events/next/0"
-)   
+    url = API_FOOTBALL_URL + ruta
 
     try:
         respuesta = requests.get(
             url,
-            headers=HEADERS,
+            headers=HEADERS_API,
+            params=parametros,
             timeout=15
         )
 
         respuesta.raise_for_status()
         datos = respuesta.json()
 
-        calendario = []
+        errores = datos.get("errors")
 
-        for evento in datos.get("events", []):
-            try:
-                timestamp = evento.get("startTimestamp")
+        if errores:
+            print(
+                "ERROR DE API-FOOTBALL:",
+                errores
+            )
+            return None
 
-                if not timestamp:
-                    continue
-
-                fecha_utc = datetime.fromtimestamp(
-                    timestamp,
-                    tz=timezone.utc
-                )
-
-                if fecha_utc <= ahora:
-                    continue
-
-                if fecha_utc > fecha_final:
-                    continue
-
-                equipo_local = evento.get("homeTeam") or {}
-                equipo_visitante = evento.get("awayTeam") or {}
-
-                local = equipo_local.get(
-                    "name",
-                    "Por confirmar"
-                )
-
-                visitante = equipo_visitante.get(
-                    "name",
-                    "Por confirmar"
-                )
-
-                id_local = equipo_local.get("id")
-                id_visitante = equipo_visitante.get("id")
-
-                logo_local = (
-                    "https://img.sofascore.com/api/v1/"
-                    f"team/{id_local}/image"
-                    if id_local
-                    else None
-                )
-
-                logo_visitante = (
-                    "https://img.sofascore.com/api/v1/"
-                    f"team/{id_visitante}/image"
-                    if id_visitante
-                    else None
-                )
-
-                fecha_local = fecha_utc.astimezone(
-                    ZONA_MONTERREY
-                )
-
-                estadio = obtener_nombre_estadio(evento)
-
-                enlace_calendar = crear_enlace_google_calendar(
-                    local,
-                    visitante,
-                    fecha_local,
-                    estadio
-                )
-
-                calendario.append({
-                    "local": local,
-                    "visitante": visitante,
-                    "fecha": fecha_local.strftime("%d/%m/%Y"),
-                    "hora": fecha_local.strftime("%I:%M %p"),
-                    "estadio": estadio,
-                    "orden": fecha_utc.isoformat(),
-                    "fecha_local_iso": fecha_local.isoformat(),
-                    "google_calendar_url": enlace_calendar,
-                    "logo_local": logo_local,
-                    "logo_visitante": logo_visitante
-                })
-
-            except (
-                KeyError,
-                ValueError,
-                TypeError
-            ) as error:
-                print(
-                    "ERROR AL PROCESAR PARTIDO:",
-                    repr(error)
-                )
-
-        calendario.sort(
-            key=lambda partido: partido["orden"]
-        )
-
-        print(
-            f"PARTIDOS ENCONTRADOS: {len(calendario)}"
-        )
-
-        return calendario
+        return datos
 
     except requests.RequestException as error:
         print(
-            "ERROR DE CONEXIÓN CON SOFASCORE:",
+            "ERROR DE CONEXIÓN CON API-FOOTBALL:",
             repr(error)
         )
-        return []
+        return None
 
     except ValueError as error:
         print(
-            "ERROR AL LEER JSON DE SOFASCORE:",
+            "ERROR AL LEER API-FOOTBALL:",
             repr(error)
         )
+        return None
+
+
+# --------------------------------------------------
+# BUSCAR ID DE TIGRES
+# --------------------------------------------------
+
+def obtener_id_tigres():
+    global TIGRES_ID_CACHE
+
+    if TIGRES_ID_CACHE:
+        return TIGRES_ID_CACHE
+
+    datos = solicitar_api(
+        "/teams",
+        {
+            "search": "Tigres UANL"
+        }
+    )
+
+    if not datos:
+        return None
+
+    resultados = datos.get("response", [])
+
+    for resultado in resultados:
+        equipo = resultado.get("team", {})
+
+        nombre = equipo.get("name", "")
+        pais = equipo.get("country", "")
+
+        if (
+            "tigres" in nombre.lower()
+            and pais.lower() == "mexico"
+        ):
+            TIGRES_ID_CACHE = equipo.get("id")
+
+            print(
+                "ID DE TIGRES ENCONTRADO:",
+                TIGRES_ID_CACHE
+            )
+
+            return TIGRES_ID_CACHE
+
+    print(
+        "ERROR: No se encontró Tigres UANL "
+        "en API-Football."
+    )
+
+    return None
+
+
+# --------------------------------------------------
+# OBTENER CALENDARIO
+# --------------------------------------------------
+
+def obtener_calendario():
+    tigres_id = obtener_id_tigres()
+
+    if not tigres_id:
         return []
+
+    datos = solicitar_api(
+        "/fixtures",
+        {
+            "team": tigres_id,
+            "next": 20,
+            "timezone": "America/Monterrey"
+        }
+    )
+
+    if not datos:
+        return []
+
+    ahora = datetime.now(timezone.utc)
+    fecha_final = ahora + timedelta(days=180)
+
+    calendario = []
+
+    for evento in datos.get("response", []):
+        try:
+            fixture = evento.get("fixture", {})
+            equipos = evento.get("teams", {})
+
+            fecha_texto = fixture.get("date")
+
+            if not fecha_texto:
+                continue
+
+            fecha_utc = datetime.fromisoformat(
+                fecha_texto.replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
+
+            if fecha_utc <= ahora:
+                continue
+
+            if fecha_utc > fecha_final:
+                continue
+
+            local_datos = equipos.get("home", {})
+            visitante_datos = equipos.get("away", {})
+
+            local = local_datos.get(
+                "name",
+                "Por confirmar"
+            )
+
+            visitante = visitante_datos.get(
+                "name",
+                "Por confirmar"
+            )
+
+            logo_local = local_datos.get("logo")
+            logo_visitante = visitante_datos.get("logo")
+
+            fecha_local = fecha_utc.astimezone(
+                ZONA_MONTERREY
+            )
+
+            venue = fixture.get("venue") or {}
+
+            estadio = (
+                venue.get("name")
+                or "Por confirmar"
+            )
+
+            enlace_calendar = crear_enlace_google_calendar(
+                local,
+                visitante,
+                fecha_local,
+                estadio
+            )
+
+            calendario.append({
+                "local": local,
+                "visitante": visitante,
+                "fecha": fecha_local.strftime("%d/%m/%Y"),
+                "hora": fecha_local.strftime("%I:%M %p"),
+                "estadio": estadio,
+                "orden": fecha_utc.isoformat(),
+                "fecha_local_iso": fecha_local.isoformat(),
+                "google_calendar_url": enlace_calendar,
+                "logo_local": logo_local,
+                "logo_visitante": logo_visitante
+            })
+
+        except (
+            KeyError,
+            ValueError,
+            TypeError
+        ) as error:
+            print(
+                "ERROR AL PROCESAR PARTIDO:",
+                repr(error)
+            )
+
+    calendario.sort(
+        key=lambda partido: partido["orden"]
+    )
+
+    print(
+        f"PARTIDOS ENCONTRADOS: {len(calendario)}"
+    )
+
+    return calendario
 
 
 # --------------------------------------------------
 # PRÓXIMO PARTIDO
 # --------------------------------------------------
 
-def obtener_proximo_partido():
-    calendario = obtener_calendario()
-
-    if calendario:
-        return calendario[0]
-
+def partido_por_confirmar():
     return {
         "local": "Tigres UANL",
         "visitante": "Por confirmar",
@@ -247,6 +310,15 @@ def obtener_proximo_partido():
         "logo_visitante": None,
         "fecha_local_iso": None
     }
+
+
+def obtener_proximo_partido():
+    calendario = obtener_calendario()
+
+    if calendario:
+        return calendario[0]
+
+    return partido_por_confirmar()
 
 
 # --------------------------------------------------
@@ -267,7 +339,8 @@ def crear_mensaje_discord(partido):
 def enviar_alerta(mensaje):
     if not WEBHOOK_URL:
         print(
-            "No se encontró DISCORD_WEBHOOK_URL."
+            "ERROR: No se encontró "
+            "DISCORD_WEBHOOK_URL."
         )
         return False
 
@@ -305,20 +378,11 @@ def enviar_alerta(mensaje):
 def inicio(request: Request):
     calendario = obtener_calendario()
 
-    if calendario:
-        partido = calendario[0]
-    else:
-        partido = {
-            "local": "Tigres UANL",
-            "visitante": "Por confirmar",
-            "fecha": "Por confirmar",
-            "hora": "Por confirmar",
-            "estadio": "Por confirmar",
-            "google_calendar_url": "#",
-            "logo_local": None,
-            "logo_visitante": None,
-            "fecha_local_iso": None
-        }
+    partido = (
+        calendario[0]
+        if calendario
+        else partido_por_confirmar()
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -340,7 +404,7 @@ def api_calendario():
 
 
 # --------------------------------------------------
-# PROBAR ALERTA MANUALMENTE
+# PRUEBA DE DISCORD
 # --------------------------------------------------
 
 @app.get("/probar-alerta")
@@ -350,10 +414,10 @@ def probar_alerta():
 
     enviado = enviar_alerta(mensaje)
 
-    if enviado:
-        print("ALERTA DE PRUEBA ENVIADA.")
-    else:
-        print("NO SE PUDO ENVIAR LA ALERTA.")
+    print(
+        "ALERTA DE PRUEBA:",
+        "ENVIADA" if enviado else "FALLÓ"
+    )
 
     return RedirectResponse(
         url="/",
@@ -362,7 +426,7 @@ def probar_alerta():
 
 
 # --------------------------------------------------
-# ALERTA AUTOMÁTICA DE VERCEL
+# ALERTA AUTOMÁTICA
 # --------------------------------------------------
 
 @app.get("/api/cron/alerta")

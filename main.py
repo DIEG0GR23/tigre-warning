@@ -182,114 +182,101 @@ def obtener_id_tigres():
 # --------------------------------------------------
 # OBTENER CALENDARIO
 # --------------------------------------------------
-
 def obtener_calendario():
-    tigres_id = obtener_id_tigres()
+    ahora = datetime.now(ZONA_MONTERREY)
 
-    if not tigres_id:
-        return []
-
-    datos = solicitar_api(
-        "/fixtures",
+    partidos = [
         {
-            "team": tigres_id,
-            "next": 20,
-            "timezone": "America/Monterrey"
-        }
-    )
-
-    if not datos:
-        return []
-
-    ahora = datetime.now(timezone.utc)
-    fecha_final = ahora + timedelta(days=180)
+            "local": "Tigres UANL",
+            "visitante": "Puebla",
+            "fecha_iso": "2026-09-26T19:00:00-06:00",
+            "estadio": "Estadio Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1296.png",
+        },
+        {
+            "local": "Tigres UANL",
+            "visitante": "Toluca",
+            "fecha_iso": "2026-10-09T21:00:00-06:00",
+            "estadio": "Estadio Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1286.png",
+        },
+        {
+            "local": "Guadalajara",
+            "visitante": "Tigres UANL",
+            "fecha_iso": "2026-10-17T17:07:00-06:00",
+            "estadio": "Estadio Akron",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1283.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+        },
+        {
+            "local": "Tigres UANL",
+            "visitante": "León",
+            "fecha_iso": "2026-10-20T21:00:00-06:00",
+            "estadio": "Estadio Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1293.png",
+        },
+        {
+            "local": "Pumas UNAM",
+            "visitante": "Tigres UANL",
+            "fecha_iso": "2026-10-24T21:00:00-06:00",
+            "estadio": "Estadio Olímpico Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1297.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+        },
+        {
+            "local": "Pachuca",
+            "visitante": "Tigres UANL",
+            "fecha_iso": "2026-10-31T17:00:00-06:00",
+            "estadio": "Estadio Hidalgo",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1295.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+        },
+        {
+            "local": "Tigres UANL",
+            "visitante": "Cruz Azul",
+            "fecha_iso": "2026-11-07T17:00:00-06:00",
+            "estadio": "Estadio Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/853.png",
+        },
+        {
+            "local": "Tigres UANL",
+            "visitante": "América",
+            "fecha_iso": "2026-11-21T21:00:00-06:00",
+            "estadio": "Estadio Universitario",
+            "logo_local": "https://golstatsimages.blob.core.windows.net/teams-80/2/1294.png",
+            "logo_visitante": "https://golstatsimages.blob.core.windows.net/teams-80/2/1292.png",
+        },
+    ]
 
     calendario = []
 
-    for evento in datos.get("response", []):
-        try:
-            fixture = evento.get("fixture", {})
-            equipos = evento.get("teams", {})
+    for partido in partidos:
+        fecha_local = datetime.fromisoformat(partido["fecha_iso"])
 
-            fecha_texto = fixture.get("date")
+        if fecha_local <= ahora:
+            continue
 
-            if not fecha_texto:
-                continue
-
-            fecha_utc = datetime.fromisoformat(
-                fecha_texto.replace("Z", "+00:00")
-            ).astimezone(timezone.utc)
-
-            if fecha_utc <= ahora:
-                continue
-
-            if fecha_utc > fecha_final:
-                continue
-
-            local_datos = equipos.get("home", {})
-            visitante_datos = equipos.get("away", {})
-
-            local = local_datos.get(
-                "name",
-                "Por confirmar"
-            )
-
-            visitante = visitante_datos.get(
-                "name",
-                "Por confirmar"
-            )
-
-            logo_local = local_datos.get("logo")
-            logo_visitante = visitante_datos.get("logo")
-
-            fecha_local = fecha_utc.astimezone(
-                ZONA_MONTERREY
-            )
-
-            venue = fixture.get("venue") or {}
-
-            estadio = (
-                venue.get("name")
-                or "Por confirmar"
-            )
-
-            enlace_calendar = crear_enlace_google_calendar(
-                local,
-                visitante,
+        calendario.append({
+            "local": partido["local"],
+            "visitante": partido["visitante"],
+            "fecha": fecha_local.strftime("%d/%m/%Y"),
+            "hora": fecha_local.strftime("%I:%M %p"),
+            "estadio": partido["estadio"],
+            "orden": fecha_local.isoformat(),
+            "fecha_local_iso": fecha_local.isoformat(),
+            "logo_local": partido["logo_local"],
+            "logo_visitante": partido["logo_visitante"],
+            "google_calendar_url": crear_enlace_google_calendar(
+                partido["local"],
+                partido["visitante"],
                 fecha_local,
-                estadio
-            )
-
-            calendario.append({
-                "local": local,
-                "visitante": visitante,
-                "fecha": fecha_local.strftime("%d/%m/%Y"),
-                "hora": fecha_local.strftime("%I:%M %p"),
-                "estadio": estadio,
-                "orden": fecha_utc.isoformat(),
-                "fecha_local_iso": fecha_local.isoformat(),
-                "google_calendar_url": enlace_calendar,
-                "logo_local": logo_local,
-                "logo_visitante": logo_visitante
-            })
-
-        except (
-            KeyError,
-            ValueError,
-            TypeError
-        ) as error:
-            print(
-                "ERROR AL PROCESAR PARTIDO:",
-                repr(error)
-            )
-
-    calendario.sort(
-        key=lambda partido: partido["orden"]
-    )
-
-    print(
-        f"PARTIDOS ENCONTRADOS: {len(calendario)}"
-    )
+                partido["estadio"],
+            ),
+        })
 
     return calendario
 

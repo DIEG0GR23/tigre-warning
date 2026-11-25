@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Tigre Warning</title>
+    <title>Tigre Warning{% if rama == 'femenil' %} · Femenil{% endif %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}">
 
-    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=5">
 </head>
 
 <body>
@@ -17,7 +17,6 @@
 
         <p class="descripcion">
             Nunca te pierdas un partido de Tigres.
-
         </p>
         <p class="descripcion">
             Si quieres recibir notificaciones de los partidos unete a nuestro servidor de discord.
@@ -27,22 +26,22 @@
             Unirse a nuestro servidor en Discord
         </a>
 
-
-
         <!-- Selector varonil/femenil -->
-        <div class="selector-equipo">
-            <a class="opcion-equipo activa" href="/">
+        <nav class="selector-equipo">
+            <a class="opcion-equipo {% if rama == 'varonil' %}activa{% endif %}" href="/">
                 VARONIL
             </a>
 
-            <button class="opcion-equipo" type="button" onclick="mostrarAvisoFemenil()">
+            <a class="opcion-equipo {% if rama == 'femenil' %}activa{% endif %}" href="/femenil">
                 FEMENIL
-            </button>
-        </div>
+            </a>
+        </nav>
 
         <!-- Próximo partido -->
         <section class="tarjeta">
-            <p class="etiqueta">PRÓXIMO PARTIDO</p>
+            <p class="etiqueta">
+                PRÓXIMO PARTIDO{% if rama == 'femenil' %} · FEMENIL{% endif %}
+            </p>
 
             <div class="enfrentamiento">
                 <div class="equipo-principal">
@@ -76,13 +75,26 @@
             <div class="encabezado-calendario">
                 <div>
                     <p class="etiqueta">TEMPORADA 2026</p>
-                    <h2>Calendario de Tigres</h2>
+                    <h2>
+                        {% if rama == 'femenil' %}
+                        Calendario de Tigres Femenil
+                        {% else %}
+                        Calendario de Tigres
+                        {% endif %}
+                    </h2>
                 </div>
 
+                {% if rama == 'femenil' %}
+                <a class="enlace-oficial" href="https://www.tigres.com.mx/es/tigres-femenil/calendario-de-juegos/" target="_blank"
+                    rel="noopener noreferrer">
+                    Consultar sitio oficial ↗
+                </a>
+                {% else %}
                 <a class="enlace-oficial" href="https://www.tigres.com.mx/es/tigres/calendario/" target="_blank"
                     rel="noopener noreferrer">
                     Consultar sitio oficial ↗
                 </a>
+                {% endif %}
             </div>
 
             {% if calendario %}
@@ -92,6 +104,9 @@
                     <div class="fecha-partido">
                         <strong>{{ juego.fecha }}</strong>
                         <span>{{ juego.hora }}</span>
+                        {% if juego.fase %}
+                        <span class="fase-partido">{{ juego.fase }}</span>
+                        {% endif %}
                     </div>
 
                     <div class="equipos-partido">
@@ -122,50 +137,67 @@
                 </article>
                 {% endfor %}
             </div>
+            {% elif rama == 'femenil' %}
+            <p>
+                Aún no hay próximos partidos publicados para Tigres Femenil.
+                En cuanto se publique el calendario del siguiente torneo aparecerá aquí.
+            </p>
             {% else %}
             <p>No hay partidos disponibles actualmente.</p>
             {% endif %}
         </section>
+
+        {% if resultados %}
+        <!-- Últimos resultados -->
+        <section class="calendario">
+            <div class="encabezado-calendario">
+                <div>
+                    <p class="etiqueta">ÚLTIMOS PARTIDOS</p>
+                    <h2>Resultados</h2>
+                </div>
+            </div>
+
+            <div class="lista-partidos">
+                {% for juego in resultados %}
+                <article class="partido-calendario partido-resultado">
+                    <div class="fecha-partido">
+                        <strong>{{ juego.fecha }}</strong>
+                        {% if juego.fase %}
+                        <span class="fase-partido">{{ juego.fase }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="equipos-partido">
+                        <div class="equipo-calendario">
+                            {% if juego.logo_local %}
+                            <img src="{{ juego.logo_local }}" alt="Escudo de {{ juego.local }}">
+                            {% endif %}
+
+                            <strong>{{ juego.local }}</strong>
+                        </div>
+
+                        <span class="vs-calendario">vs.</span>
+
+                        <div class="equipo-calendario">
+                            {% if juego.logo_visitante %}
+                            <img src="{{ juego.logo_visitante }}" alt="Escudo de {{ juego.visitante }}">
+                            {% endif %}
+
+                            <strong>{{ juego.visitante }}</strong>
+                        </div>
+
+                        <span>🏟️ {{ juego.estadio }}</span>
+                    </div>
+
+                    <div class="marcador">
+                        {{ juego.marcador_local }} - {{ juego.marcador_visitante }}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
     </main>
+</body>
 
-    <!-- Ventana emergente de Femenil -->
-    <div id="aviso-femenil" class="aviso-oculto" onclick="cerrarAlPulsarFondo(event)">
-        <div class="ventana-aviso">
-            <span class="icono-aviso">🐯</span>
-
-            <h2>¡Próximamente!</h2>
-
-            <p>
-                El calendario y las alertas de Tigres Femenil
-                estarán disponibles muy pronto.
-            </p>
-
-            <button type="button" onclick="cerrarAvisoFemenil()">
-                Entendido
-            </button>
-        </div>
-    </div>
-
-    <script>
-        const avisoFemenil = document.getElementById("aviso-femenil");
-
-        function mostrarAvisoFemenil() {
-            avisoFemenil.classList.add("aviso-visible");
-        }
-
-        function cerrarAvisoFemenil() {
-            avisoFemenil.classList.remove("aviso-visible");
-        }
-
-        function cerrarAlPulsarFondo(evento) {
-            if (evento.target === avisoFemenil) {
-                cerrarAvisoFemenil();
-            }
-        }
-
-        document.addEventListener("keydown", function (evento) {
-            if (evento.key === "Escape") {
-                cerrarAvisoFemenil();
-            }
-        });
-    
+</html>

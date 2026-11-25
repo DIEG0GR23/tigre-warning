@@ -340,3 +340,31 @@ h2 span {
     color: white;
     background-color: #4752c4;
 }
+/* Fase del torneo (femenil) */
+.fecha-partido .fase-partido {
+    color: #f5c400;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Últimos resultados */
+.marcador {
+    align-self: center;
+    min-width: 90px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #071b3d;
+    background: #f5c400;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .marcador {
+        width: 100%;
+        margin-top: 8px;
+    }
+}

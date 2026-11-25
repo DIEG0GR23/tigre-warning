@@ -11,6 +11,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+from formato import completar_partido
+
 
 ZONA_MONTERREY = ZoneInfo("America/Monterrey")
 
@@ -151,7 +153,7 @@ def _convertir_evento(evento):
         or "Por confirmar"
     )
 
-    return {
+    return completar_partido({
         "local": nombre_local,
         "visitante": nombre_visitante,
         "fecha": fecha_local.strftime("%d/%m/%Y"),
@@ -173,7 +175,7 @@ def _convertir_evento(evento):
             fecha_local,
             estadio,
         ),
-    }
+    }, fecha_local)
 
 
 # --------------------------------------------------

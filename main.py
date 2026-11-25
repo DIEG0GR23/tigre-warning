@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
 from femenil import obtener_datos_femenil
+from formato import completar_partido
 
 
 load_dotenv()
@@ -262,7 +263,7 @@ def obtener_calendario():
         if fecha_local <= ahora:
             continue
 
-        calendario.append({
+        calendario.append(completar_partido({
             "local": partido["local"],
             "visitante": partido["visitante"],
             "fecha": fecha_local.strftime("%d/%m/%Y"),
@@ -278,7 +279,7 @@ def obtener_calendario():
                 fecha_local,
                 partido["estadio"],
             ),
-        })
+        }, fecha_local))
 
     return calendario
 

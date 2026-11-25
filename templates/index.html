@@ -8,40 +8,56 @@
     <title>Tigre Warning{% if rama == 'femenil' %} · Femenil{% endif %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}">
 
-    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=6">
 </head>
 
-<body>
-    <main class="contenedor">
-        <h1>🐯 Tigre Warning</h1>
-
-        <p class="descripcion">
-            Nunca te pierdas un partido de Tigres.
-        </p>
-        <p class="descripcion">
-            Si quieres recibir notificaciones de los partidos unete a nuestro servidor de discord.
-        </p>
-
-        <a class="boton boton-discord" href="https://discord.gg/DJtMs8nu6w" target="_blank" rel="noopener noreferrer">
-            Unirse a nuestro servidor en Discord
+<body class="rama-{{ rama }}">
+    <!-- Barra superior -->
+    <header class="barra-superior">
+        <a class="marca" href="/">
+            <span class="marca-icono">🐯</span>
+            <span class="marca-texto">Tigre Warning</span>
+            {% if rama == 'femenil' %}
+            <span class="insignia-rama">FEMENIL</span>
+            {% endif %}
         </a>
 
-        <!-- Selector varonil/femenil -->
-        <nav class="selector-equipo">
-            <a class="opcion-equipo {% if rama == 'varonil' %}activa{% endif %}" href="/">
-                VARONIL
-            </a>
+        <a class="boton-discord" href="https://discord.gg/DJtMs8nu6w" target="_blank" rel="noopener noreferrer"
+            title="Recibe alertas de los partidos en nuestro servidor de Discord">
+            🔔 <span class="texto-largo">Alertas en </span>Discord
+        </a>
+    </header>
 
-            <a class="opcion-equipo {% if rama == 'femenil' %}activa{% endif %}" href="/femenil">
-                FEMENIL
-            </a>
-        </nav>
+    <main class="contenedor">
+        <!-- Hero -->
+        <section class="hero">
+            <h1>
+                Nunca te pierdas un partido de
+                <span>Tigres{% if rama == 'femenil' %} Femenil{% endif %}</span>
+            </h1>
+
+            <nav class="selector-equipo" aria-label="Elegir rama">
+                <a class="opcion-equipo {% if rama == 'varonil' %}activa{% endif %}" href="/">
+                    VARONIL
+                </a>
+
+                <a class="opcion-equipo {% if rama == 'femenil' %}activa{% endif %}" href="/femenil">
+                    FEMENIL
+                </a>
+            </nav>
+        </section>
 
         <!-- Próximo partido -->
         <section class="tarjeta">
-            <p class="etiqueta">
-                PRÓXIMO PARTIDO{% if rama == 'femenil' %} · FEMENIL{% endif %}
-            </p>
+            <div class="tarjeta-encabezado">
+                <p class="etiqueta">PRÓXIMO PARTIDO</p>
+
+                {% if partido.fecha_local_iso %}
+                <span class="sede {% if partido.es_local %}sede-local{% else %}sede-visita{% endif %}">
+                    {% if partido.es_local %}🏠 Local{% else %}✈️ Visita{% endif %}
+                </span>
+                {% endif %}
+            </div>
 
             <div class="enfrentamiento">
                 <div class="equipo-principal">
@@ -63,12 +79,45 @@
                 </div>
             </div>
 
+            {% if partido.fecha_local_iso %}
+            <div class="cuenta-regresiva" data-fecha="{{ partido.fecha_local_iso }}" aria-live="polite">
+                <div class="bloque-tiempo"><strong data-unidad="dias">--</strong><span>días</span></div>
+                <div class="bloque-tiempo"><strong data-unidad="horas">--</strong><span>horas</span></div>
+                <div class="bloque-tiempo"><strong data-unidad="minutos">--</strong><span>min</span></div>
+                <div class="bloque-tiempo"><strong data-unidad="segundos">--</strong><span>seg</span></div>
+            </div>
+            <p class="mensaje-cuenta" hidden></p>
+            {% endif %}
+
             <div class="informacion">
-                <p>📅 {{ partido.fecha }}</p>
+                <p>📅 {{ partido.fecha_corta or partido.fecha }}</p>
                 <p>⏰ {{ partido.hora }}</p>
                 <p>🏟️ {{ partido.estadio }}</p>
             </div>
+
+            {% if partido.google_calendar_url and partido.google_calendar_url != '#' %}
+            <a class="boton-calendar boton-calendar-principal" href="{{ partido.google_calendar_url }}"
+                target="_blank" rel="noopener noreferrer">
+                📅 Agregar a Google Calendar
+            </a>
+            {% endif %}
         </section>
+
+        {% if resultados %}
+        <!-- Racha -->
+        <section class="racha" aria-label="Racha de los últimos partidos">
+            <p class="etiqueta">RACHA</p>
+            <div class="racha-lista">
+                {% for juego in resultados | reverse %}
+                <span class="racha-item resultado-{{ juego.resultado or 'N' }}"
+                    title="{{ juego.local }} {{ juego.marcador_local }} - {{ juego.marcador_visitante }} {{ juego.visitante }}">
+                    {{ juego.resultado or '?' }}
+                </span>
+                {% endfor %}
+            </div>
+            <span class="racha-nota">más reciente →</span>
+        </section>
+        {% endif %}
 
         <!-- Calendario -->
         <section class="calendario">
@@ -76,17 +125,13 @@
                 <div>
                     <p class="etiqueta">TEMPORADA 2026</p>
                     <h2>
-                        {% if rama == 'femenil' %}
-                        Calendario de Tigres Femenil
-                        {% else %}
-                        Calendario de Tigres
-                        {% endif %}
+                        Calendario de Tigres{% if rama == 'femenil' %} Femenil{% endif %}
                     </h2>
                 </div>
 
                 {% if rama == 'femenil' %}
-                <a class="enlace-oficial" href="https://www.tigres.com.mx/es/tigres-femenil/calendario-de-juegos/" target="_blank"
-                    rel="noopener noreferrer">
+                <a class="enlace-oficial" href="https://www.tigres.com.mx/es/tigres-femenil/calendario-de-juegos/"
+                    target="_blank" rel="noopener noreferrer">
                     Consultar sitio oficial ↗
                 </a>
                 {% else %}
@@ -100,10 +145,17 @@
             {% if calendario %}
             <div class="lista-partidos">
                 {% for juego in calendario %}
-                <article class="partido-calendario">
+                {% if loop.changed(juego.mes) %}
+                <h3 class="mes">{{ juego.mes }}</h3>
+                {% endif %}
+
+                <article class="partido-calendario {% if juego.es_local %}es-local{% else %}es-visita{% endif %}">
                     <div class="fecha-partido">
-                        <strong>{{ juego.fecha }}</strong>
+                        <strong>{{ juego.fecha_corta }}</strong>
                         <span>{{ juego.hora }}</span>
+                        <span class="sede {% if juego.es_local %}sede-local{% else %}sede-visita{% endif %}">
+                            {% if juego.es_local %}🏠 Local{% else %}✈️ Visita{% endif %}
+                        </span>
                         {% if juego.fase %}
                         <span class="fase-partido">{{ juego.fase }}</span>
                         {% endif %}
@@ -130,6 +182,7 @@
 
                         <span>🏟️ {{ juego.estadio }}</span>
                     </div>
+
                     <a class="boton-calendar" href="{{ juego.google_calendar_url }}" target="_blank"
                         rel="noopener noreferrer">
                         📅 Agregar a Google Calendar
@@ -138,12 +191,12 @@
                 {% endfor %}
             </div>
             {% elif rama == 'femenil' %}
-            <p>
+            <p class="sin-partidos">
                 Aún no hay próximos partidos publicados para Tigres Femenil.
                 En cuanto se publique el calendario del siguiente torneo aparecerá aquí.
             </p>
             {% else %}
-            <p>No hay partidos disponibles actualmente.</p>
+            <p class="sin-partidos">No hay partidos disponibles actualmente.</p>
             {% endif %}
         </section>
 
@@ -159,9 +212,12 @@
 
             <div class="lista-partidos">
                 {% for juego in resultados %}
-                <article class="partido-calendario partido-resultado">
+                <article class="partido-calendario partido-resultado {% if juego.es_local %}es-local{% else %}es-visita{% endif %}">
                     <div class="fecha-partido">
-                        <strong>{{ juego.fecha }}</strong>
+                        <strong>{{ juego.fecha_corta }}</strong>
+                        <span class="sede {% if juego.es_local %}sede-local{% else %}sede-visita{% endif %}">
+                            {% if juego.es_local %}🏠 Local{% else %}✈️ Visita{% endif %}
+                        </span>
                         {% if juego.fase %}
                         <span class="fase-partido">{{ juego.fase }}</span>
                         {% endif %}
@@ -189,8 +245,14 @@
                         <span>🏟️ {{ juego.estadio }}</span>
                     </div>
 
-                    <div class="marcador">
-                        {{ juego.marcador_local }} - {{ juego.marcador_visitante }}
+                    <div class="marcador resultado-{{ juego.resultado or 'N' }}">
+                        <span>{{ juego.marcador_local }} - {{ juego.marcador_visitante }}</span>
+                        <small>
+                            {% if juego.resultado == 'G' %}Victoria
+                            {% elif juego.resultado == 'E' %}Empate
+                            {% elif juego.resultado == 'P' %}Derrota
+                            {% endif %}
+                        </small>
                     </div>
                 </article>
                 {% endfor %}
@@ -198,6 +260,64 @@
         </section>
         {% endif %}
     </main>
+
+    <script>
+        (function () {
+            const cuenta = document.querySelector(".cuenta-regresiva");
+
+            if (!cuenta) {
+                return;
+            }
+
+            const mensaje = document.querySelector(".mensaje-cuenta");
+            const inicio = new Date(cuenta.dataset.fecha).getTime();
+            const DURACION_PARTIDO = 2 * 60 * 60 * 1000;
+
+            const unidades = {
+                dias: cuenta.querySelector('[data-unidad="dias"]'),
+                horas: cuenta.querySelector('[data-unidad="horas"]'),
+                minutos: cuenta.querySelector('[data-unidad="minutos"]'),
+                segundos: cuenta.querySelector('[data-unidad="segundos"]')
+            };
+
+            function dosDigitos(numero) {
+                return String(numero).padStart(2, "0");
+            }
+
+            function mostrarMensaje(texto) {
+                cuenta.hidden = true;
+                mensaje.hidden = false;
+                mensaje.textContent = texto;
+            }
+
+            function actualizar() {
+                const ahora = Date.now();
+                const restante = inicio - ahora;
+
+                if (restante <= 0) {
+                    mostrarMensaje(
+                        ahora - inicio < DURACION_PARTIDO
+                            ? "🔥 ¡Se está jugando ahora!"
+                            : "Partido finalizado"
+                    );
+                    clearInterval(intervalo);
+                    return;
+                }
+
+                const segundosTotales = Math.floor(restante / 1000);
+
+                unidades.dias.textContent = Math.floor(segundosTotales / 86400);
+                unidades.horas.textContent = dosDigitos(Math.floor(segundosTotales % 86400 / 3600));
+                unidades.minutos.textContent = dosDigitos(Math.floor(segundosTotales % 3600 / 60));
+                unidades.segundos.textContent = dosDigitos(segundosTotales % 60);
+
+                cuenta.classList.toggle("cuenta-urgente", restante < 24 * 60 * 60 * 1000);
+            }
+
+            const intervalo = setInterval(actualizar, 1000);
+            actualizar();
+        })();
+    </script>
 </body>
 
 </html>

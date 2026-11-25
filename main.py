@@ -11,6 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
+from femenil import obtener_datos_femenil
+from formato import completar_partido
+
 
 load_dotenv()
 
@@ -260,7 +263,7 @@ def obtener_calendario():
         if fecha_local <= ahora:
             continue
 
-        calendario.append({
+        calendario.append(completar_partido({
             "local": partido["local"],
             "visitante": partido["visitante"],
             "fecha": fecha_local.strftime("%d/%m/%Y"),
@@ -276,7 +279,7 @@ def obtener_calendario():
                 fecha_local,
                 partido["estadio"],
             ),
-        })
+        }, fecha_local))
 
     return calendario
 
@@ -375,8 +378,33 @@ def inicio(request: Request):
         request=request,
         name="index.html",
         context={
+            "rama": "varonil",
             "partido": partido,
-            "calendario": calendario
+            "calendario": calendario,
+            "resultados": []
+        }
+    )
+
+
+@app.get("/femenil")
+def inicio_femenil(request: Request):
+    datos = obtener_datos_femenil()
+    calendario = datos["proximos"]
+
+    if calendario:
+        partido = calendario[0]
+    else:
+        partido = partido_por_confirmar()
+        partido["local"] = "Tigres UANL Femenil"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "rama": "femenil",
+            "partido": partido,
+            "calendario": calendario,
+            "resultados": datos["resultados"]
         }
     )
 
@@ -388,6 +416,11 @@ def inicio(request: Request):
 @app.get("/api/calendario")
 def api_calendario():
     return obtener_calendario()
+
+
+@app.get("/api/calendario/femenil")
+def api_calendario_femenil():
+    return obtener_datos_femenil()
 
 
 # --------------------------------------------------
